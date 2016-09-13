@@ -25,7 +25,7 @@ function setup()
     null = current
     lastPlayer = 0
     symbol = {"♠️","♣️","♥️","♦️"}
-    
+    cPlay = true
 end
 
 -- This function gets called once every frame
@@ -49,32 +49,109 @@ function draw()
         end
     else
         drawHand(turn)
+        current:draw(WIDTH/2,HEIGHT/2)
         drawButtons()
+        fontSize(WIDTH/45)
         if CurrentTouch.state == BEGAN then
             touch = true
         end
+        fill(0)
         if face == 0 then
             if touch then
                 readButtons()
             end
-            fontSize(WIDTH/45)
-            fill(0)
-            text("Tap a card to start with and select a suit to call",WIDTH/2,HEIGHT/4*3)
+            
+            text("Tap a suit to call",WIDTH/2,HEIGHT/4*3)
+        else
+            
+            if cPlay then
+                
+                if current.sum == 0 then
+                    text("Tap a card to start with",WIDTH/2,HEIGHT/4*3)
+                    if touch and readCard() > 0 then
+                        current = table.remove(hands[turn],readCard())
+                        lastPlayer = turn
+                        nextTurn()
+                    end
+                else
+                    text("Tap a card that has a sum equal to or higher than the last played card with a matching suit",WIDTH/2,HEIGHT/4*3)
+                    if touch and readCard() > 0 then
+                        if checkCard(hands[turn][readCard()]) then
+                            current = table.remove(hands[turn],readCard())
+                            lastPlayer = turn
+                            nextTurn()
+                        end
+                    end
+                end
+            else
+                text("Tap a card to discard or tap ✖️ to continue",WIDTH/2,HEIGHT/4*3)
+                fontSize(WIDTH/12)
+                text("✖️",WIDTH/2,HEIGHT/2)
+                if CurrentTouch.y> HEIGHT*7/16 then
+                    if touch then
+                        nextTurn()
+                        if turn == lastPlayer then
+                            nextStack()
+                        end
+                    end
+                else
+                    if touch and readCard() > 0 then
+                        table.remove(hands[turn],readCard())
+                        nextTurn()
+                        if turn == lastPlayer then
+                            nextStack()
+                        end
+                    end
+                end
+            end
         end
         
         fontSize(WIDTH/16)
         text("SCORE: "..score[turn],WIDTH/8*6,HEIGHT*7/8)
-        current:draw(WIDTH/2,HEIGHT/2)
     end
     --deck[10]:draw(WIDTH/2,HEIGHT/2)
     -- Do your drawing here
     
+end
+
+function readCard()
+    if CurrentTouch.y < HEIGHT/2 then
+        x = WIDTH/(1+#hands[turn])
+        n = x
+        x = x - WIDTH/24
+        for i =1,#hands[turn] do
+            if CurrentTouch.x > x and CurrentTouch.x < x+n then
+                return i
+            end
+            x = x + n
+        end
+    end
+    return 0
+end
+
+function canPlay()
+    if #hands[turn] > 0 then
+        for i=1,#hands[turn] do
+            if checkCard(hands[turn][i]) == true then
+                return true
+            end
+        end
+        return false
+    else
+        return false
+        
+    end
+end
+
+function checkCard(input)
+    return (input.value[face] == current.value[face] and input.sum >= current.sum)
 end
 function nextStack()
     face = 0
     current = null
     score[lastPlayer] = score[lastPlayer] + 1
     turn = lastPlayer
+    cPlay = true
 end
 function drawButtons()
     fontSize(WIDTH/12)
@@ -83,7 +160,11 @@ function drawButtons()
     for i=1,4 do
         if face == i then
             fill(255, 0, 0, 122)
-            rect(WIDTH/8+i,HEIGHT/2.5+i*HEIGHT/8,WIDTH/4,HEIGHT/12)
+            rect(WIDTH/8,HEIGHT/2.5+i*HEIGHT/8,WIDTH/4,HEIGHT/12)
+            if current:cone() > 0 then
+                fill(255)
+                text(current.value[i],WIDTH/8+WIDTH/16,HEIGHT/2.5+i*HEIGHT/8)
+            end
         end
         
         fill(255, 255, 255, 255)
@@ -158,6 +239,8 @@ function nextTurn()
     if turn > players then
         turn = 1
     end
+    cPlay = canPlay()
+    pass = true
 end
 
 function card:cone()
