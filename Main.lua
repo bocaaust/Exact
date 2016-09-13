@@ -14,20 +14,26 @@ function setup()
         hands[i] = {}
     end
     fillHands()
+    positions = {0,0}
     rectMode(CENTER)
     textMode(CENTER)
     turn = 1
     pass = true
     touch = false
+    face = 0
     current = card(0,0,0,0)
+    null = current
+    lastPlayer = 0
     symbol = {"♠️","♣️","♥️","♦️"}
+    
 end
 
 -- This function gets called once every frame
 function draw()
     -- This sets a dark background color
-    background(40, 40, 50)
+    background(65, 101, 59, 255)
     -- This sets the line thickness
+    
     if pass then
         fill(255, 255, 255, 255)
         --fontSize(WIDTH/6)
@@ -39,17 +45,57 @@ function draw()
         end
         if touch then
             pass = (CurrentTouch.state == BEGAN)
+            touch = false
         end
     else
         drawHand(turn)
+        drawButtons()
+        if CurrentTouch.state == BEGAN then
+            touch = true
+        end
+        if face == 0 then
+            if touch then
+                readButtons()
+            end
+            fontSize(WIDTH/45)
+            fill(0)
+            text("Tap a card to start with and select a suit to call",WIDTH/2,HEIGHT/4*3)
+        end
+        
         fontSize(WIDTH/16)
         text("SCORE: "..score[turn],WIDTH/8*6,HEIGHT*7/8)
         current:draw(WIDTH/2,HEIGHT/2)
     end
     --deck[10]:draw(WIDTH/2,HEIGHT/2)
     -- Do your drawing here
-    if turn > players then
-        turn = 1
+    
+end
+function nextStack()
+    face = 0
+    current = null
+    score[lastPlayer] = score[lastPlayer] + 1
+    turn = lastPlayer
+end
+function drawButtons()
+    fontSize(WIDTH/12)
+    fill(77, 46, 70, 255)
+    rect(WIDTH/8,HEIGHT*3/4-HEIGHT/24,WIDTH/4,HEIGHT/4*2+HEIGHT/12)
+    for i=1,4 do
+        if face == i then
+            fill(255, 0, 0, 122)
+            rect(WIDTH/8+i,HEIGHT/2.5+i*HEIGHT/8,WIDTH/4,HEIGHT/12)
+        end
+        
+        fill(255, 255, 255, 255)
+        text(symbol[i],WIDTH/8+i,HEIGHT/2.5+i*HEIGHT/8)
+    end
+end
+function readButtons()
+    for i = 1,4 do
+        if CurrentTouch.y > HEIGHT/2.5 +(i)*HEIGHT/8-HEIGHT/24 and CurrentTouch.y < HEIGHT/2.5 +(i)*HEIGHT/8+HEIGHT/24  then
+            face = i
+            print("selected i")
+        end
     end
 end
 function drawHand(t)
@@ -107,6 +153,13 @@ function card:sphere()
     return self.value[3]
 end
 
+function nextTurn()
+    turn = turn + 1
+    if turn > players then
+        turn = 1
+    end
+end
+
 function card:cone()
     return self.value[4]
 end
@@ -117,6 +170,8 @@ function card:draw(x,y)
     fill(255, 255, 255, 255)
     if self.selected then
         stroke(173, 220, 222, 171)
+        x = position[1]
+        y = position[2]
     end
     rect(x,y,WIDTH/30,HEIGHT/12)
     fill(224, 224, 218, 211)
