@@ -9,7 +9,7 @@ function setup()
         score[i] = {}
     end
     touch2 = false
-    deckPopulate()
+    
     spriteMode(CENTER)
     positions = {0,0}
     tags = {"PILES: ","BID: ","SCORE: "}
@@ -25,9 +25,11 @@ function setup()
     cPlay = true
     hasSetup = false
     drawingLeaderboard = false
+    leaderboard = {}
 end
 
 function postSetup()
+    deckPopulate()
     hands= {}
     score[2] = {}
     fillHands()
@@ -38,6 +40,7 @@ function postSetup()
     --bids = {}
     lastPlayer = 0
     turn = 1
+    drawingLeaderboard=false
 end
 
 -- This function gets called once every frame
@@ -46,8 +49,29 @@ function draw()
     background(65, 101, 59, 255)
     -- This sets the line thickness
     if drawingLeaderboard then
-        
-        
+        fontSize(WIDTH/7)
+        fill(0)
+        text("🔚",WIDTH/8,HEIGHT/2)
+        text("⚔",WIDTH*3.5/4,HEIGHT/2)
+        fontSize(WIDTH/24)
+        text("Next Round",WIDTH*3.5/4,1.4*HEIGHT/4)
+        fill(math.random(0,25))
+        text("LEADERBOARD",WIDTH/2,HEIGHT*7/8)
+        fill(0)
+        fontSize(WIDTH/30)
+        for i=1,#leaderboard do
+            text(leaderboard[i],WIDTH/2,HEIGHT*6/8-(i-1)*HEIGHT*5/(8*players))
+        end
+        if CurrentTouch.state == BEGAN then
+            touch = true
+        end
+        if CurrentTouch.state == ENDED and touch then
+            if CurrentTouch.x > WIDTH/2 then
+                postSetup()
+            else
+                setup()
+            end
+        end
     else
         if hasSetup then
             
@@ -108,6 +132,8 @@ function draw()
                                 --Score tallying and prompt to continue here
                                 checkScores()
                                 drawingLeaderboard = true
+                                touch = false
+                                rankPlayers()
                             else
                                 text("Tap a card to discard or tap ✖️ to continue",WIDTH/2,HEIGHT/4*3)
                                 fontSize(WIDTH/12)
@@ -158,7 +184,7 @@ function draw()
                         touch2 = true
                     end
                     fontSize(WIDTH/18)
-                    print(#score[2]+1)
+                    --  print(#score[2]+1)
                     text("Player "..(#score[2]+1).." bet on the number of tricks you'll get",WIDTH/2,HEIGHT/4*3)
                     for i=0,8 do
                         if bSum +i ~= 8 then
@@ -202,10 +228,24 @@ function draw()
                 text(i,(i-.5)*WIDTH/9,HEIGHT/2)
             end
         end
-        --deck[10]:draw(WIDTH/2,HEIGHT/2)
-        -- Do your drawing here
     end
 end
+
+function rankPlayers()
+    leaderboard = {}
+    temp = score[3]
+    temp2 = temp
+    table.sort(temp2)
+    for i=1,#temp2 do
+        for j=1,players do
+            if temp2[i] == temp[j] then
+                table.insert(leaderboard,"Player "..j..": "..temp2[i].." Points")
+                break
+            end
+        end
+    end
+end
+
 
 function checkScores()
     --pbs
@@ -283,6 +323,8 @@ function nextStack()
         hasThrown[i] = false
     end
 end
+
+
 function drawButtons()
     fontSize(WIDTH/12)
     fill(77, 46, 70, 255)
@@ -305,7 +347,7 @@ function readButtons()
     for i = 1,4 do
         if CurrentTouch.y > HEIGHT/2.5 +(i)*HEIGHT/8-HEIGHT/24 and CurrentTouch.y < HEIGHT/2.5 +(i)*HEIGHT/8+HEIGHT/24  then
             face = i
-            print("selected i")
+            --  print("selected i")
         end
     end
 end
@@ -319,6 +361,7 @@ function drawHand(t)
 end
 
 function deckPopulate()
+    deck = {}
     c=1
     for x =1,3 do
         for y = 1,3 do
