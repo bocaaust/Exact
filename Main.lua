@@ -8,6 +8,7 @@ function setup()
     for i = 1,3 do
         score[i] = {}
     end
+    touch2 = false
     deckPopulate()
     spriteMode(CENTER)
     positions = {0,0}
@@ -18,11 +19,12 @@ function setup()
     pass = true
     touch = false
     totals = {}
-    
+    hasThrown = {}
     null = current
     symbol = {"♠️","♣️","♥️","♦️"}
     cPlay = true
     hasSetup = false
+    drawingLeaderboard = false
 end
 
 function postSetup()
@@ -43,132 +45,192 @@ function draw()
     -- This sets a dark background color
     background(65, 101, 59, 255)
     -- This sets the line thickness
-    if hasSetup then
+    if drawingLeaderboard then
         
-        if pass then
-            fill(255, 255, 255, 255)
-            --fontSize(WIDTH/6)
-            -- text("Pass To Next Player",WIDTH/2,HEIGHT/4*3)
-            fontSize(WIDTH/9)
-            text("Tap to Continue",WIDTH/2,HEIGHT/2)
-            if CurrentTouch.state == BEGAN then
-                touch = true
-            end
-            if touch then
-                pass = (CurrentTouch.state == ENDED)
-                touch = false
-            end
-        else
-            if CurrentTouch.state == ENDED then
-                touch = true
-            end
-            if #score[2] == players then
-                drawHand(turn)
-                current:draw(WIDTH/2,HEIGHT/2)
-                drawButtons()
-                fontSize(WIDTH/45)
-                
-                fill(0)
-                if face == 0 then
-                    if touch and CurrentTouch.state == BEGAN then
-                        readButtons()
-                    end
+        
+    else
+        if hasSetup then
+            
+            if pass then
+                fill(255, 255, 255, 255)
+                --fontSize(WIDTH/6)
+                -- text("Pass To Next Player",WIDTH/2,HEIGHT/4*3)
+                fontSize(WIDTH/9)
+                text("Tap to Continue",WIDTH/2,HEIGHT/2)
+                if CurrentTouch.state == BEGAN then
+                    touch = true
+                end
+                if touch and CurrentTouch.state == ENDED then
+                    pass = false
+                    touch = false
+                    touch2 = false
+                end
+            else
+                if CurrentTouch.state == ENDED then
+                    touch = true
+                end
+                if #score[2] == players then
+                    drawHand(turn)
+                    current:draw(WIDTH/2,HEIGHT/2)
+                    drawButtons()
+                    fontSize(WIDTH/45)
                     
-                    text("Tap a suit to call",WIDTH/2,HEIGHT/4*3)
-                else
-                    
-                    if cPlay then
+                    fill(0)
+                    if face == 0 then
+                        if touch and CurrentTouch.state == BEGAN then
+                            readButtons()
+                        end
                         
-                        if current.sum == 0 then
-                            text("Tap a card to start with",WIDTH/2,HEIGHT/4*3)
-                            if touch and readCard() > 0 then
-                                current = table.remove(hands[turn],readCard())
-                                lastPlayer = turn
-                                nextTurn()
-                            end
-                        else
-                            text("Tap a card that has a sum equal to or higher than the last played card with a matching suit",WIDTH/2,HEIGHT/4*3)
-                            if touch and readCard() > 0 then
-                                if checkCard(hands[turn][readCard()]) then
+                        text("Tap a suit to call",WIDTH/2,HEIGHT/4*3)
+                    else
+                        
+                        if cPlay then
+                            
+                            if current.sum == 0 then
+                                text("Tap a card to start with",WIDTH/2,HEIGHT/4*3)
+                                if touch and readCard() > 0 then
                                     current = table.remove(hands[turn],readCard())
                                     lastPlayer = turn
                                     nextTurn()
                                 end
-                            end
-                        end
-                    else
-                        if endGame() then
-                            
-                        else
-                            text("Tap a card to discard or tap ✖️ to continue",WIDTH/2,HEIGHT/4*3)
-                            fontSize(WIDTH/12)
-                            text("✖️",WIDTH/2,HEIGHT/2)
-                            if CurrentTouch.y> HEIGHT*7/16 then
-                                if touch then
-                                    nextTurn()
-                                    if turn == lastPlayer then
-                                        nextStack()
+                            else
+                                text("Tap a card that has a sum equal to or higher than the last played card with a matching suit",WIDTH/2,HEIGHT/4*3)
+                                if touch and readCard() > 0 then
+                                    if checkCard(hands[turn][readCard()]) then
+                                        current = table.remove(hands[turn],readCard())
+                                        lastPlayer = turn
+                                        nextTurn()
                                     end
                                 end
+                            end
+                        else
+                            if endGame() then
+                                --Score tallying and prompt to continue here
+                                checkScores()
+                                drawingLeaderboard = true
                             else
-                                if touch and readCard() > 0 then
-                                    table.remove(hands[turn],readCard())
-                                    nextTurn()
-                                    if turn == lastPlayer then
-                                        nextStack()
+                                text("Tap a card to discard or tap ✖️ to continue",WIDTH/2,HEIGHT/4*3)
+                                fontSize(WIDTH/12)
+                                text("✖️",WIDTH/2,HEIGHT/2)
+                                if CurrentTouch.y> HEIGHT*7/16 then
+                                    if touch then
+                                        hasThrown[turn] = true
+                                        nextTurn()
+                                        while hasThrown[turn] and turn ~= lastPlayer do
+                                            nextTurn()
+                                        end
+                                        if turn == lastPlayer then
+                                            nextStack()
+                                        end
+                                    end
+                                else
+                                    if touch and readCard() > 0 then
+                                        table.remove(hands[turn],readCard())
+                                        nextTurn()
+                                        hasThrown[turn] = true
+                                        while hasThrown[turn] and turn ~= lastPlayer do
+                                            nextTurn()
+                                        end
+                                        if turn == lastPlayer then
+                                            nextStack()
+                                        end
                                     end
                                 end
                             end
                         end
                     end
+                    
+                    fontSize(WIDTH/20)
+                    --more efficient version
+                    h = HEIGHT*.875
+                    for i = 1,3 do
+                        text(tags[i]..score[i][turn],WIDTH*.75,h)
+                        x,y = textSize(tags[i]..score[i][turn])
+                        h = h - y
+                    end
+                else
+                    --bidding section here
+                    -- if (bSum > 0 and bSum < 8) or (bSum == 8 and) then
+                    x = WIDTH/4+WIDTH/18
+                    --   else
+                    --  x = WIDTH/4
+                    if CurrentTouch.state == BEGAN then
+                        touch2 = true
+                    end
+                    fontSize(WIDTH/18)
+                    print(#score[2]+1)
+                    text("Player "..(#score[2]+1).." bet on the number of tricks you'll get",WIDTH/2,HEIGHT/4*3)
+                    for i=0,8 do
+                        if bSum +i ~= 8 then
+                            text(i,x,HEIGHT/2)
+                            x = x + WIDTH/18
+                            if CurrentTouch.state == ENDED and touch2 and CurrentTouch.x >x-WIDTH/18 and CurrentTouch.x<x+WIDTH/32-WIDTH/18 then
+                                score[2][(#score[2]+1)] = i
+                                bSum = bSum + i
+                                pass = true
+                                touch = false
+                                touch2 = false
+                            end
+                        end
+                    end
                 end
-                
-                fontSize(WIDTH/20)
-                --more efficient version
-                h = HEIGHT*.875
-                for i = 1,3 do
-                    text(tags[i]..score[i][turn],WIDTH*.75,h)
-                    x,y = textSize(tags[i]..score[i][turn])
-                    h = h - y
-                end
-            else
-                
             end
-        end
-    else
-        fill(255)
-        fontSize(WIDTH/32)
-        text("Select the number of players",WIDTH/2,HEIGHT*3/4)
-        --if CurrentTouch.state == ENDED then
-        touch = true
-        --end
-        
-        fontSize(WIDTH/12)
-        for i = 2,8 do
-            if touch then
-                if CurrentTouch.state == ENDED then
-                    if CurrentTouch.x > (i-.5)*WIDTH/9-textSize(i) and CurrentTouch.x < (i-.5)*WIDTH/9+textSize(i) then
-                        players = i
-                        touch = false
-                        hasSetup = true
-                        postSetup()
-                        touch = false
+        else
+            fill(255)
+            fontSize(WIDTH/32)
+            text("Select the number of players",WIDTH/2,HEIGHT*3/4)
+            --if CurrentTouch.state == ENDED then
+            touch = true
+            --end
+            
+            fontSize(WIDTH/12)
+            for i = 2,8 do
+                if touch then
+                    if CurrentTouch.state == ENDED then
+                        if CurrentTouch.x > (i-.5)*WIDTH/9-textSize(i) and CurrentTouch.x < (i-.5)*WIDTH/9+textSize(i) then
+                            players = i
+                            touch = false
+                            hasSetup = true
+                            postSetup()
+                            touch = false
+                            
+                        end
+                        
                         
                     end
-                    
-                    
                 end
+                text(i,(i-.5)*WIDTH/9,HEIGHT/2)
             end
-            text(i,(i-.5)*WIDTH/9,HEIGHT/2)
+        end
+        --deck[10]:draw(WIDTH/2,HEIGHT/2)
+        -- Do your drawing here
+    end
+end
+
+function checkScores()
+    --pbs
+    for i = 1,players do
+        if #hands[i] > 0 then
+            score[1][i] = score[1][i] + #hands[i]
+        end
+        if score[1][i] == score[2][i] then
+            score[3][i] = score[3][i] + score[1][i]
+        elseif score[1][i] < score[2][i] then
+            score[3][i] = score[3][i] - (score[2][i]-score[1][i])
+        else
+            score[3][i] = score[3][i] - (score[1][i]-score[2][i])
         end
     end
-    --deck[10]:draw(WIDTH/2,HEIGHT/2)
-    -- Do your drawing here
-    
 end
 
 function endGame()
-    return false
+    hasCards = 0
+    for i = 1,players do
+        if #hands[i] > 0 then
+            hasCards = hasCards + 1
+        end
+    end
+    return (hasCards <= 1)
 end
 
 function readCard()
@@ -187,16 +249,20 @@ function readCard()
 end
 
 function canPlay()
-    if #hands[turn] > 0 then
-        for i=1,#hands[turn] do
-            if checkCard(hands[turn][i]) == true then
-                return true
-            end
-        end
+    if endGame() then
         return false
     else
-        return false
-        
+        if #hands[turn] > 0 then
+            for i=1,#hands[turn] do
+                if checkCard(hands[turn][i]) == true then
+                    return true
+                end
+            end
+            return false
+        else
+            return false
+            
+        end
     end
 end
 
@@ -212,6 +278,10 @@ function nextStack()
     score[1][lastPlayer] = score[1][lastPlayer] + 1
     turn = lastPlayer
     cPlay = true
+    hasThrown = {}
+    for i =1,players do
+        hasThrown[i] = false
+    end
 end
 function drawButtons()
     fontSize(WIDTH/12)
@@ -266,8 +336,13 @@ function deckPopulate()
 end
 
 function fillHands()
+    hasThrown = {}
     for i = 1,players do
         hands[i] = {}
+        if score[3][i] == nil then
+            score[3][i] = 0
+        end
+        hasThrown[i] = false
         for h=1,8 do
             hands[i][h] = table.remove(deck,1)
         end
