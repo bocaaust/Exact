@@ -8,7 +8,7 @@ function setup()
     for i = 1,3 do
         score[i] = {}
     end
-    touch2 = false
+    touch2 = true
     
     spriteMode(CENTER)
     positions = {0,0}
@@ -20,7 +20,6 @@ function setup()
     touch = false
     totals = {}
     hasThrown = {}
-    null = current
     symbol = {"♠️","♣️","♥️","♦️"}
     cPlay = true
     hasSetup = false
@@ -36,6 +35,7 @@ function postSetup()
     hasSetup = true
     face = 0
     current = card(0,0,0,0)
+    null = current
     bSum = 0
     --bids = {}
     lastPlayer = 0
@@ -78,23 +78,33 @@ function draw()
             if pass then
                 fill(255, 255, 255, 255)
                 --fontSize(WIDTH/6)
-                -- text("Pass To Next Player",WIDTH/2,HEIGHT/4*3)
+                
                 fontSize(WIDTH/9)
+                text("Pass To Next Player",WIDTH/2,HEIGHT/4*3)
                 text("Tap to Continue",WIDTH/2,HEIGHT/2)
-                if CurrentTouch.state == BEGAN then
+                if CurrentTouch.state == ENDED then
+                    touch2 = true
+                end
+                if CurrentTouch.state == BEGAN and touch2 then
                     touch = true
                 end
-                if touch and CurrentTouch.state == ENDED then
+                if touch and CurrentTouch.state == ENDED and touch2 then
                     pass = false
                     touch = false
                     touch2 = false
                 end
             else
-                if CurrentTouch.state == ENDED then
+                if CurrentTouch.state == BEGAN then
+                    touch2=true
+                end
+                if CurrentTouch.state == ENDED and touch2 then
                     touch = true
                 end
                 if #score[2] == players then
                     drawHand(turn)
+                    if current == nil then
+                        current = null
+                    end
                     current:draw(WIDTH/2,HEIGHT/2)
                     drawButtons()
                     fontSize(WIDTH/45)
@@ -105,21 +115,22 @@ function draw()
                             readButtons()
                         end
                         
-                        text("Tap a suit to call",WIDTH/2,HEIGHT/4*3)
+                        text("Tap a suit to call",WIDTH/2,HEIGHT/4*2.8)
                     else
                         
                         if cPlay then
                             
                             if current.sum == 0 then
-                                text("Tap a card to start with",WIDTH/2,HEIGHT/4*3)
+                                text("Tap a card to start with",WIDTH/2,HEIGHT/4*2.8)
                                 if touch and readCard() > 0 then
                                     current = table.remove(hands[turn],readCard())
                                     lastPlayer = turn
                                     nextTurn()
                                 end
                             else
-                                text("Tap a card that has a sum equal to or higher than the last played card with a matching suit",WIDTH/2,HEIGHT/4*3)
-                                if touch and readCard() > 0 then
+                                text("Tap a card that has a sum equal to or higher than",WIDTH/2,HEIGHT/4*2.8)
+                                text("the last played card with a matching suit",WIDTH/2,HEIGHT/4*2.67)
+                                if touch and readCard() > 0  then
                                     if checkCard(hands[turn][readCard()]) then
                                         current = table.remove(hands[turn],readCard())
                                         lastPlayer = turn
@@ -135,7 +146,7 @@ function draw()
                                 touch = false
                                 rankPlayers()
                             else
-                                text("Tap a card to discard or tap ✖️ to continue",WIDTH/2,HEIGHT/4*3)
+                                text("Tap a card to discard or tap ✖️ to continue",WIDTH/2,HEIGHT/4*2.8)
                                 fontSize(WIDTH/12)
                                 text("✖️",WIDTH/2,HEIGHT/2)
                                 if CurrentTouch.y> HEIGHT*7/16 then
@@ -168,7 +179,7 @@ function draw()
                     
                     fontSize(WIDTH/20)
                     --more efficient version
-                    h = HEIGHT*.875
+                    h = HEIGHT*.925
                     for i = 1,3 do
                         text(tags[i]..score[i][turn],WIDTH*.75,h)
                         x,y = textSize(tags[i]..score[i][turn])
@@ -176,6 +187,7 @@ function draw()
                     end
                 else
                     --bidding section here
+                    fill(255)
                     -- if (bSum > 0 and bSum < 8) or (bSum == 8 and) then
                     x = WIDTH/4+WIDTH/18
                     --   else
@@ -183,14 +195,16 @@ function draw()
                     if CurrentTouch.state == BEGAN then
                         touch2 = true
                     end
-                    fontSize(WIDTH/18)
+                    
+                    fontSize(WIDTH/30)
                     --  print(#score[2]+1)
                     text("Player "..(#score[2]+1).." bet on the number of tricks you'll get",WIDTH/2,HEIGHT/4*3)
+                    fontSize(WIDTH/18)
                     for i=0,8 do
                         if bSum +i ~= 8 then
                             text(i,x,HEIGHT/2)
                             x = x + WIDTH/18
-                            if CurrentTouch.state == ENDED and touch2 and CurrentTouch.x >x-WIDTH/18 and CurrentTouch.x<x+WIDTH/32-WIDTH/18 then
+                            if CurrentTouch.state == ENDED and touch2 and CurrentTouch.x >x-WIDTH/18-WIDTH/32 and CurrentTouch.x<x+WIDTH/32-WIDTH/18 then
                                 score[2][(#score[2]+1)] = i
                                 bSum = bSum + i
                                 pass = true
@@ -198,6 +212,9 @@ function draw()
                                 touch2 = false
                             end
                         end
+                    end
+                    if touch then
+                        drawHand(#score[2]+1)
                     end
                 end
             end
@@ -347,6 +364,7 @@ function readButtons()
     for i = 1,4 do
         if CurrentTouch.y > HEIGHT/2.5 +(i)*HEIGHT/8-HEIGHT/24 and CurrentTouch.y < HEIGHT/2.5 +(i)*HEIGHT/8+HEIGHT/24  then
             face = i
+            touch = false
             --  print("selected i")
         end
     end
@@ -420,6 +438,8 @@ function nextTurn()
     end
     cPlay = canPlay()
     pass = true
+    touch = false
+    touch2=false
 end
 
 function card:cone()
